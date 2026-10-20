@@ -1,0 +1,382 @@
+                        MITSUBISHI ELECTRIC RESEARCH LABORATORIES
+                                     https://www.merl.com
+
+
+
+
+     The MERL Systems for DCASE 2026 Challenge Task 2
+  Fujimura, Takuya; Wichern, Gordon; Masuyama, Yoshiki; Boeddeker, Christoph; Saijo, Kohei;
+                      Richter, Julius; Edo, Takahiro; Le Roux, Jonathan
+                                           TR2026-100        July 01, 2026
+
+
+
+
+                                              Abstract
+    In this report, we present our anomalous sound detection (ASD) systems for DCASE 2026
+    Challenge Task 2. Our approach introduces noise-aware audio self-supervised learning (NA-
+    SSL) to leverage two-channel recordings, in which one microphone is used to capture noise.
+    NA-SSL models are trained to extract clean SSL representations from two-channel noisy
+    signals simulated on external datasets. Then, we perform ASD in the extracted denoised
+    feature space. To further improve performance, we perform discrim- inative fine-tuning with
+    attributes and pseudo labels. Furthermore, for anomaly score calculation, we employ several
+    recent techniques: score rescaling, frequency-wise memory bank construction, and deviation-
+    based pooling. Our final ensemble system has achieved 66.20% in the official scores calculated
+    as a harmonic mean of the area under the curve (AUC) and partial AUC (p = 0.1) over all
+    machine types and domains in the development set.
+
+      IEEE AASP Challenge on Detection and Classification of Acoustic Scenes and Events
+      (DCASE Challenge) 2026
+
+
+
+
+© 2026 IEEE. Personal use of this material is permitted. Permission from IEEE must be obtained for all other uses, in
+any current or future media, including reprinting/republishing this material for advertising or promotional purposes,
+creating new collective works, for resale or redistribution to servers or lists, or reuse of any copyrighted component of
+this work in other works.
+
+                                    Mitsubishi Electric Research Laboratories, Inc.
+                                   201 Broadway, Cambridge, Massachusetts 02139
+Detection and Classification of Acoustic Scenes and Events 2026                                                                        Challenge
+
+
+
+
+                        THE MERL SYSTEMS FOR DCASE 2026 CHALLENGE TASK 2
+                                                                  Technical Report
+
+               Takuya Fujimura1,2∗ , Gordon Wichern1 , Yoshiki Masuyama1 , Christoph Boeddeker1 ,
+                       Kohei Saijo3 , Julius Richter1 , Takahiro Edo1 , Jonathan Le Roux1
+                        1
+                    Mitsubishi Electric Research Laboratories (MERL), Cambridge, USA,
+                                    2
+                                      Nagoya University, Nagoya, Japan,
+          3
+            Information Technology R&D Center, Mitsubishi Electric Corporation, Kanagawa, Japan
+
+
+                             ABSTRACT                                          Noisy far-mic Noisy close-mic          Clean
+                                                                                recording      recording              target       Original
+In this report, we present our anomalous sound detection (ASD)
+systems for DCASE 2026 Challenge Task 2. Our approach in-                                                                          SSL
+troduces noise-aware audio self-supervised learning (NA-SSL) to                                                                    layers
+                                                                                                   Projection
+leverage two-channel recordings, in which one microphone is used                                                                   Additional
+to capture noise. NA-SSL models are trained to extract clean SSL                                                                   trainable
+representations from two-channel noisy signals simulated on exter-                                  Encoder            SSL         layer
+nal datasets. Then, we perform ASD in the extracted denoised fea-
+ture space. To further improve performance, we perform discrim-                                    NA Layer                        Shared
+inative fine-tuning with attributes and pseudo labels. Furthermore,           N×                                                   weights
+for anomaly score calculation, we employ several recent techniques:
+                                                                              NA-SSL                   r̂       MSE     r
+score rescaling, frequency-wise memory bank construction, and
+deviation-based pooling. Our final ensemble system has achieved
+66.20% in the official scores calculated as a harmonic mean of the          Figure 1: Overview of NA-SSL. The model estimates clean SSL
+area under the curve (AUC) and partial AUC (p = 0.1) over all               representations r from two-channel noisy signals, with one micro-
+machine types and domains in the development set.                           phone placed close to the target sound source and the other placed
+                                                                            farther away to capture background noise.
+    Index Terms— Anomalous sound detection, audio self-
+supervised learning, noise aware
+                                                                            by discriminative fine-tuning with attribute labels [5], the original
+                                                                            SSL representations have already achieved strong performance [4,
+                       1. INTRODUCTION
+                                                                            7, 8] without attribute labels. We can also generate pseudo la-
+This report describes our systems for DCASE 2026 Challenge                  bels from SSL representations to perform discriminative fine-tuning
+Task 2 [1]. This task focuses on anomalous sound detection (ASD),           under the unlabeled condition (iv) [9]. Furthermore, SSL-based
+which aims to detect mechanical failures from machine sounds un-            methods have shown strong performance across various machine
+der the following conditions: (i) the training data includes only           types [6], satisfying condition (iii). These properties make SSL-
+normal sounds, (ii) there is a data imbalance between the source            based methods a good fit for this task.
+and target domains, (iii) the machine types differ between the                   Our solution improves SSL representations using the noise-
+development and evaluation sets, requiring generalization across            aware (NA) SSL framework [10]. Specifically, we design NA-
+machine types, and (iv) auxiliary machine attribute information,            BEATs and NA-EAT as the NA extensions of BEATs [11] and
+which is helpful for improving performance, is not always avail-            EAT [12], respectively. As shown in Fig. 1, these NA-SSL models
+able. These requirements are inherited from recent editions [2, 3].         are trained to extract clean representations from two-channel noisy
+This year’s task additionally introduces two-channel recordings in-         signals simulated on external datasets. Here, the NA-SSL model
+stead of monaural recordings to facilitate system performance im-           learns to extract target sound information dominant in the close mi-
+provement [1]. One of the microphones is located close to the target        crophone by leveraging noise information dominant in the far mi-
+machine, while the other is located farther away to capture predom-         crophone. To further improve representations for the ASD task, we
+inantly noise.                                                              also perform discriminative fine-tuning using attributes and pseudo
+     A recent trend in ASD is the use of self-supervised learning           labels on the provided machine-sound datasets. For anomaly score
+(SSL) models [4–6]. SSL representations effectively capture subtle          calculation, we employ recently proposed frequency-wise memory
+differences between normal and anomalous sounds, and anomaly                bank construction [7] and deviation-based pooling [8]. To han-
+scores can be estimated based on the distances between a test sam-          dle the domain-shift condition (ii), we also employ score rescaling
+ple and normal training samples in the representation space under           techniques [13–15]. Experimental evaluations on the development
+the condition (i). Although we can further improve the performance          dataset show that NA-SSL substantially improves performance, and
+                                                                            our final ensemble system achieved an official score of 66.20%, out-
+    *This work was done during an internship at MERL.                       performing the official baseline system, which achieved 57.66%.
+Detection and Classification of Acoustic Scenes and Events 2026                                                                      Challenge
+
+
+
+                 2. PRIOR WORK:                                         Table 1: SSL models used as frontends in our ASD systems. Dis
+      NOISE-AWARE SELF-SUPERVISED LEARNING                              and NA denote discriminative fine-tuning and NA distillation, re-
+                                                                        spectively. EAT-large was used without discriminative fine-tuning
+NA-SSL aims to extract clean SSL representations from noisy sig-        or NA distillation.
+nals by leveraging auxiliary noise information [10]. As a specific
+realization, NA-BEATs has been proposed based on the widely                 Original      NA              Dis            Dis NA
+used BEATs [11], where the auxiliary noise is obtained by crop-
+                                                                            BEATs         NA-BEATs        Dis BEATs      Dis NA-BEATs
+ping a noise-only segment from the noisy input signal [10]. NA-
+                                                                            EAT           NA-EAT          Dis EAT        Dis NA-EAT
+BEATs is trained by distillation with a mean squared error (MSE)
+                                                                            EAT-large     -               -              -
+loss between the target representation sequence r ∈ RL×D from the
+frozen original BEATs and the estimated representation sequence
+r̂ ∈ RL×D , given by                                                          Table 2: Backend techniques used in our ASD systems.
+
+                       r = BEATs(s),                              (1)      Component                  Method
+                       r̂ = NABEATs(x, n′ ),                      (2)      Memory bank                Frequency-wise [7]
+                                                                           Temporal pooling           Average / RDP [8]
+where s, x, and n′ denote clean target sound, noisy target sound,
+                                                                           Domain shift handling      SMOTE [26] / score rescaling [15]
+and auxiliary noise-only signal, respectively, L is the sequence
+length, and D is the representation dimension.
+    The NA-BEATs model is constructed by inserting trainable NA
+layers into the frozen original BEATs after each Transformer layer.     but only modify the auxiliary noise condition to match the chal-
+Both the noisy target sound x and auxiliary noise n′ are passed         lenge setup. In DCASE 2026 Challenge Task 2, the target ma-
+through the same BEATs layers, and the NA layers refine the rep-        chine sound is recorded by close and far microphones, while noise
+resentation of the noisy target sound zx ∈ RL×D using the noise         is played from the four corners of the room [19]. We carefully
+representation zn′ ∈ RL×D . Specifically, the cross-attention-based     simulate this recording setup using Pyroomacoustics [20] and use
+NA layer works as follows:                                              the far-microphone signal as the auxiliary noise condition. There-
+                                                                        fore, the NA-SSL models are trained to extract target sound in-
+          zx ←
+             − zx + MHCA(Norm(zx ), Norm(zn′ )),                  (3)   formation that is more dominant in the close microphone than in
+          zx ←
+             − zx + SwiGLU(Norm(zx )),                            (4)   the far microphone. Also, we obtain the clean target sound at the
+                                                                        close microphone with early reflections within 50 ms. Training is
+where MHCA denotes multi-head cross-attention [16], with the first      performed on large external datasets: FSD50K [21] is used as the
+argument used as the query and the second argument used as the key      target-sound dataset, while WHAM!48kHz [22], DEMAND [23],
+and value. Norm denotes root mean square normalization [17] and         and QUT-NOISE [24] are used as noise datasets. For NA-EAT, we
+SwiGLU denotes a Swish gated linear unit (SwiGLU)-based feed-           use MSE losses for the representation sequence and the CLS token
+forward network (FFN) [18].                                             with equal weights.
+    NA-BEATs significantly improves performance on various                   We also perform discriminative fine-tuning on the provided
+downstream tasks under noisy conditions and generalizes well to         machine-sound datasets. We aggregate the representation sequence
+unseen noise by using the auxiliary noise information.                  into a single DDis -dimensional discriminative feature using an at-
+                                                                        tentive statistics pooling layer [25] and a linear layer. The discrimi-
+                                                                        native feature is used only for the classification loss, while the SSL
+                    3. PROPOSED SYSTEMS                                 representation sequence before aggregation is used for the backend.
+                                                                        For machine types without attribute labels, we generate pseudo la-
+ASD systems consist of a frontend and a backend [6]. The frontend       bels [9]. The pseudo labels are generated in the source domain, and
+extracts features from machine sounds, and the backend computes         are then combined with the other available coarse labels of the tar-
+anomaly scores based on distances between the features.                 get machine (i.e., machine-type and domain labels) and attributes
+                                                                        of the other machines, to form a multi-class classification task. We
+                                                                        first apply temporal pooling [4] to the SSL representations, as fol-
+3.1. Frontend
+                                                                        lows. First, we reshape the SSL representation sequence r ∈ RL×D
+Table 1 summarizes the frontends used in our ASD systems. We            into a time-frequency structure rTF ∈ RT ×F ×D , where T and F
+use BEATs (BEATs iter3.pt), EAT (EAT-base epoch30 pretrain),            are the numbers of mel-spectrogram patches along the time and fre-
+and EAT-large (EAT-large epoch20 pretrain) as the base SSL mod-         quency axes, respectively. Then, we apply average pooling along
+els. All of these models convert mel-spectrogram patches into           the time axis and concatenate the frequency axis to obtain a single
+a representation sequence r ∈ RL×D through a projection layer           F D-dimensional feature for each sample. Finally, the pseudo la-
+and Transformer layers, where L corresponds to the number of            bels are generated by applying k-means clustering to the features
+mel-spectrogram patches. EAT and EAT-large include an addi-             within each machine type. When fine-tuning a given SSL frontend,
+tional CLS token with dimension D to capture global information.        we generate the pseudo labels from that same frontend.
+These conventional single-channel SSL models take only the close-
+microphone signal as input.                                             3.2. Backend
+    We design NA-BEATs and NA-EAT as the NA extensions of
+BEATs and EAT, respectively. We use the same cross-attention-           Table 2 summarizes the backends used in our ASD systems. First,
+based NA layers and training procedure as described in Section 2,       we employ frequency-wise memory bank construction [7]. Here,
+Detection and Classification of Acoustic Scenes and Events 2026                                                                       Challenge
+
+
+
+Table 3: Evaluation of frontends using the same backend which consists of frequency-wise memory bank construction, average temporal
+pooling, and score rescaling. The values are the official scores, and Total is the harmonic mean of the scores over all machine types. ∗ denotes
+machine types without attribute labels.
+
+        Frontend            bearingEmu∗         fan     gearboxEmu      sliderEmu∗   ToyCar∗     ToyCarEmu       valveEmu∗        Total
+        BEATs                    62.94         52.12        64.43         63.57        57.40         57.62          66.59         60.28
+        EAT                      62.74         50.96        61.16         60.71        55.21         59.24          67.62         59.24
+        EAT-large                61.23         51.74        61.09         60.59        55.10         56.73          80.27         59.95
+        NA-BEATs                 62.48         53.15        64.43         65.77        57.26         58.57          93.34         63.18
+        NA-EAT                   62.37         56.58        63.77         66.12        55.73         57.69          90.21         63.13
+        Dis BEATs                64.07         51.26        66.39         66.52        53.24         57.48          79.28         61.40
+        Dis EAT                  62.84         50.90        63.53         58.63        52.19         59.13          68.67         58.83
+        Dis NA-BEATs             65.85         52.19        69.44         69.41        53.45         58.31          95.21         63.92
+        Dis NA-EAT               62.62         57.69        68.89         71.38        54.25         56.51          92.32         64.35
+
+
+temporal pooling is applied to the time-frequency-structured SSL            SewingMachine, Sander, and BlowerDustCollector. The training
+representation rTF , and a D-dimensional feature memory bank is             data include 1000 normal samples for each machine type, with 990
+constructed for each frequency index. The nearest-neighbor dis-             samples from the source domain and 10 samples from the target
+tances between a test sample and normal training samples are cal-           domain. The test data in the development dataset include 50 sam-
+culated separately for each frequency index and then averaged along         ples for each machine type, domain, and normal/anomalous class.
+the frequency axis to obtain the sample-level anomaly score. This           Attribute labels are available for the following machine types: fan,
+technique mitigates undesirably high anomaly scores caused by               gearboxEmu, ToyCarEmu, ToyDrone, Sander, and BlowerDustCol-
+variations within normal sounds. For example, an unseen combi-              lector. Each recording was a 6–16-second two-channel signal sam-
+nation of machine sound and noise can yield a high anomaly score,           pled at 16 kHz.
+even when each frequency component has been separately observed                  During training of the NA-SSL models, all signals were re-
+in the training data. By avoiding strict joint comparison across fre-       sampled to 16 kHz and randomly cropped or zero-padded to 10 s.
+quencies, this technique improves robustness to normal variations           For impulse response simulation with Pyroomacoustics, the room
+while retaining sensitivity to anomalies in each frequency.                 length and width were randomly sampled from [3.0, 8.0] m, and
+     For temporal pooling applied to rTF during frequency-wise              the height was sampled from [1.5, 3.0] m. The reverberation time,
+memory construction, we use either simple average pooling or                RT60, was randomly sampled from [0.1, 0.4] s. The target sound
+relative deviation pooling (RDP) [8]. RDP is a weighted average             source was randomly placed with a 0.5 m margin from the walls.
+over the representation sequence, where the weights are determined          The close microphone was fixed 0.05 m from the target source,
+based on the deviation of each representation from the sequence             while the far microphone was randomly placed [0.1, 1.0] m away
+average. This emphasizes representations that deviate from the av-          from the close microphone. Four different noise sources were ran-
+erage, thereby preserving temporally localized anomalies that are           domly selected and placed 0.2 m away from the room corners. All
+smoothed out by typical average pooling. This technique has been            sound sources and microphones were placed at a height of 1.0 m.
+observed to be particularly effective with the BEATs frontend [8].          The SNR at the close microphone was randomly selected from [-10,
+     To handle the data imbalance between the source and target             10] dB.
+domains, we use either SMOTE [26] or score rescaling [14, 15].                   For the NA layers, we set the number of heads in MHCA to
+SMOTE augments target-domain samples by linear interpolation                8 and the hidden size of the FFN to 2304. We trained both NA-
+between nearest neighbors in the feature space. Score rescaling             BEATs and NA-EAT for 200 epochs using the AdamW optimizer,
+adjusts anomaly scores based on the local density in the feature            a fixed learning rate of 0.0001, and a batch size of 160. We applied
+space and reduces score-scale mismatches between domains caused             exponential moving average (EMA) with a decay rate of 0.999 after
+by data imbalance. Especially, we use the variance-minimization-            20k training steps.
+based score rescaling [15], which further adjusts anomaly scores to              For discriminative fine-tuning, we applied low-rank adaptation
+minimize their variance in the training data.                               (LoRA) with a rank of 64 to the query, key, and value projection
+                                                                            layers in the attention modules. For NA-SSL, we also applied LoRA
+                                                                            to MHCA in NA layers. We fine-tuned the models for 25 epochs
+              4. EXPERIMENTAL EVALUATION
+                                                                            using sub-cluster AdaCos [29] with 16 sub-clusters, DDis = 256,
+                                                                            mixup with a probability of 0.5, AdamW optimizer, and a batch
+4.1. Setup
+                                                                            size of 8. The learning rate was linearly increased from 0 to 0.0001
+We conducted experimental evaluations using the DCASE 2026                  over the first 5,000 steps.
+Challenge Task 2 development dataset, compiled from ToyAD-                       For RDP in the backend, we set the deviation power γ to 4. For
+MOS2 [27] and MIMII DG [28], and the additional training dataset.           score rescaling, we set the number of nearest neighbors to 4. For
+The development dataset includes training and test data for seven           SMOTE, we augmented the target-domain samples to 20% of the
+machine types: bearingEmu, fan, gearboxEmu, valveEmu, slid-                 source-domain samples using two nearest neighbors.
+erEmu, ToyCarEmu, and ToyCar. The additional training dataset in-                As the evaluation metric, we used the official score [1] cal-
+cludes training data for five machine types: ToyDrone, ToothBrush,          culated as the harmonic mean of three types of area under the
+Detection and Classification of Acoustic Scenes and Events 2026                                                                          Challenge
+
+
+
+Table 4: Configuration of the final systems. The backend always employs frequency-wise memory bank construction but employs different
+techniques for temporal pooling and domain-shift handling. ∗ Only Fujimura MERL task2 2 used weighted averaging, where the weights for
+BEATs, EAT, EAT-large, NA-EAT, and NA-BEATs are 1, 0.5, 0.5, 1, and 1, respectively. † Fujimura MERL task2 4 selected Dis NA-EAT
+when attribute labels are available, and selected NA-EAT otherwise.
+
+                                                                          Temporal   Domain shift
+    System name                       Frontend set                                                      Ensemble method
+                                                                          pooling    handling
+    Fujimura MERL task2 1             Dis NA-EAT, Dis NA-BEATs            Average    SMOTE              Averaging anomaly scores
+    Fujimura MERL task2 2             BEATs, EAT, EAT-large,              Average    Score rescaling    Averaging anomaly scores∗
+                                      NA-EAT, NA-BEATs
+    Fujimura MERL task2 3             Dis NA-BEATs                        RDP        Score rescaling    N/A (single frontend)
+    Fujimura MERL task2 4             NA-EAT, Dis NA-EAT                  Average    Score rescaling    Selection based on label availability†
+
+Table 5: Evaluation results of the baseline systems and the final systems. The values are the official scores, and Total is the harmonic mean of
+the scores over all machine types. ∗ denotes machine types without attribute labels.
+
+  System name                     bearingEmu∗         fan    gearboxEmu       sliderEmu∗    ToyCar∗      ToyCarEmu       valveEmu∗        Total
+  Baseline (MSE)                      60.56          53.26        55.93         52.71         51.60         61.73          63.22          56.66
+  Baseline (MAHALA)                   62.79          51.75        58.92         54.29         61.33         62.37          54.26          57.66
+  Fujimura MERL task2 1               59.15          55.86        65.61         68.69         70.71         63.11          89.70          66.20
+  Fujimura MERL task2 2               62.76          55.36        64.19         66.38         57.11         58.19          90.73          63.43
+  Fujimura MERL task2 3               65.28          52.95        69.66         73.19         54.14         57.80          95.99          64.57
+  Fujimura MERL task2 4               62.37          57.69        68.89         66.12         55.73         56.51          90.21          63.79
+
+
+receiver operating characteristic (ROC) curve (AUC): (a) partial              autoencoders, and two variants, MSE and MAHALA, are provided.
+AUC (pAUC) with p = 0.1, calculated using samples from both                   All of our systems substantially outperform these official baseline
+the source and target domains; and (b) source-domain and (c) target-          systems. The best official score of the baseline systems is 57.66%,
+domain AUCs, each calculated using normal samples from the cor-               while our best system, Fujimura MERL task2 1, achieves 66.20%.
+responding domain and anomalous samples from both domains.                    In addition, the effectiveness of RDP can be observed by compar-
+     We performed NA-SSL training and discriminative fine-tuning              ing Dis NA-BEATs in Table 3 with Fujimura MERL task2 3 in Ta-
+for three trials with different random seeds and averaged the                 ble 5. The former uses average pooling and achieves a total score
+anomaly scores across the trials.                                             of 63.92%, whereas the latter uses RDP and improves the score to
+                                                                              64.57%.
+4.2. Results
+                                                                                                       5. CONCLUSION
+Table 3 compares frontends using the same backend consisting of
+frequency-wise memory bank construction, average temporal pool-               In this report, we presented our systems for DCASE 2026 Challenge
+ing, and score rescaling. First, we can see that NA-SSL is effective          Task 2. We introduced NA-SSL to leverage two-channel recordings,
+regardless of the base model (i.e., BEATs or EAT), and whether dis-           where one microphone is located far from the target machine to cap-
+criminative fine-tuning is applied or not. Both NA-BEATs and NA-              ture noise. Specifically, we designed NA-BEATs and NA-EAT as
+EAT show substantial improvements of over 20 % for valveEmu,                  NA extensions of BEATs and EAT, respectively. We also employed
+and each also improves performance for other machine types. Dis-              several techniques to further improve performance, namely discrim-
+criminative fine-tuning further improves the performance, and the             inative fine-tuning, pseudo labeling, frequency-wise memory bank
+top two total scores are obtained by Dis NA-EAT and Dis NA-                   construction, RDP, and score rescaling. Experimental results on
+BEATs. Also, by using pseudo labels, the benefits of discrimina-              the development set demonstrated the consistent effectiveness of
+tive fine-tuning can be observed even for machine types without               NA-SSL, regardless of the base SSL model and whether discrim-
+attribute labels (e.g., bearingEmu, sliderEmu, and valveEmu).                 inative fine-tuning was applied. One of our final systems achieved
+     Table 4 shows the configurations of our final systems. The final         an official score of 66.20%, substantially outperforming the official
+systems ensemble multiple frontends with a single backend, where              baseline systems, which achieved 57.66%.
+the backend differs across systems. The ensemble of frontends is
+performed by averaging their anomaly scores or by selecting models
+with or without discriminative fine-tuning based on the availability
+of attribute labels. Although discriminative fine-tuning is generally
+effective, it can sometimes degrade performance [9]. Therefore,
+we also submit Fujimura MERL task2 2 as a system without fine-
+tuning.
+     Table 5 shows the evaluation results of our final systems and the
+official baseline systems [30]. The baseline systems are based on
+Detection and Classification of Acoustic Scenes and Events 2026                                                                                  Challenge
+
+
+
+                          6. REFERENCES                                          [22]   G. Wichern, J. Antognini, M. Flynn, L. R. Zhu, E. McQuinn, D.
+                                                                                        Crow, E. Manilow, and J. Le Roux, “WHAM!: Extending speech
+ [1]   T. Nishida, N. Harada, D. Takeuchi, D. Niizumi, K. Imoto, K. Dohi,               separation to noisy environments,” in Proc. Interspeech, 2019.
+       H. Purohit, T. Endo, and Y. Kawaguchi, “Description and discus-           [23]   J. Thiemann, N. Ito, and E. Vincent, “The Diverse Environments
+       sion on DCASE 2026 challenge task 2: Noise-aware unsupervised                    Multi-channel Acoustic Noise Database (DEMAND): A database of
+       anomalous sound detection for machine condition monitoring,” In                  multichannel environmental noise recordings,” in POMA, vol. 19,
+       arXiv e-prints: 2606.01578, 2026.                                                2013.
+ [2]   T. Nishida et al., “Description and discussion on DCASE 2024 chal-        [24]   D. Dean, S. Sridharan, R. Vogt, and M. Mason, “The QUT-NOISE-
+       lenge task 2: First-shot unsupervised anomalous sound detection for              TIMIT corpus for the evaluation of voice activity detection algo-
+       machine condition monitoring,” in Proc. DCASE, 2024.                             rithms,” in Proc. Interspeech, 2010.
+ [3]   T. Nishida et al., “Description and discussion on DCASE 2025 chal-        [25]   K. Okabe, T. Koshinaka, and K. Shinoda, “Attentive statistics pool-
+       lenge task 2: First-shot unsupervised anomalous sound detection for              ing for deep speaker embedding,” in Proc. Interspeech, 2018.
+       machine condition monitoring,” in Proc. DCASE, 2025.                      [26]   N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer,
+ [4]   P. Saengthong and T. Shinozaki, “Deep generic representations for                “SMOTE: Synthetic minority over-sampling technique,” JAIR,
+       domain-generalized anomalous sound detection,” in Proc. ICASSP,                  vol. 16, pp. 321–357, 2002.
+       2025.                                                                     [27]   N. Harada, D. Niizumi, D. Takeuchi, Y. Ohishi, M. Yasuda, and S.
+ [5]   A. Jiang, B. Han, Z. Lv, Y. Deng, W.-Q. Zhang, X. Chen, Y. Qian, J.              Saito, “ToyADMOS2: Another dataset of miniature-machine operat-
+       Liu, and P. Fan, “Anopatch: Towards better consistency in machine                ing sounds for anomalous sound detection under domain shift condi-
+       anomalous sound detection,” in Proc. Interspeech, 2024.                          tions,” in Proc. DCASE, 2021.
+ [6]   T. Fujimura, K. Wilkinghoff, K. Imoto, and T. Toda, “ASDKit: A            [28]   K. Dohi, T. Nishida, H. Purohit, R. Tanabe, T. Endo, M. Yamamoto,
+       toolkit for comprehensive evaluation of anomalous sound detection                Y. Nikaido, and Y. Kawaguchi, “MIMII DG: Sound dataset for mal-
+       methods,” in Proc. DCASE, 2025.                                                  functioning industrial machine investigation and inspection for do-
+ [7]   P. Saengthong and T. Shinozaki, “Sub-band spectral matching with                 main generalization task,” in Proc. DCASE, 2022.
+       localized score aggregation for robust anomalous sound detection,”        [29]   K. Wilkinghoff, “Sub-cluster AdaCos: Learning representations for
+       arXiv preprint arXiv:2603.13749, 2026.                                           anomalous sound detection,” in Proc. IJCNN, 2021.
+ [8]   K. Wilkinghoff, S. Yadav, and Z.-H. Tan, “Temporal pooling                [30]   N. Harada, D. Niizumi, Y. Ohishi, D. Takeuchi, and M. Yasuda,
+       strategies for training-free anomalous sound detection with self-                “First-shot anomaly sound detection for machine condition monitor-
+       supervised audio embeddings,” arXiv preprint arXiv:2603.04605,                   ing: A domain generalization baseline,” in Proc. EUSIPCO, 2023.
+       2026.
+ [9]   T. Fujimura, I. Kuroyanagi, and T. Toda, “Improvements of discrim-
+       inative feature space training for anomalous sound detection in unla-
+       beled conditions,” in Proc. ICASSP, 2025.
+[10]   T. Fujimura, Y. Masuyama, G. Wichern, C. Boeddeker, J. Richter,
+       and J. Le Roux, “NABEATs: Noise-aware audio representation
+       learning,” in Proc. IWAENC, (submitted), 2026.
+[11]   S. Chen, Y. Wu, C. Wang, S. Liu, D. Tompkins, Z. Chen, W. Che, X.
+       Yu, and F. Wei, “BEATs: Audio pre-training with acoustic tokeniz-
+       ers,” in Proc. ICML, 2023.
+[12]   W. Chen, Y. Liang, Z. Ma, Z. Zheng, and X. Chen, “EAT: Self-
+       supervised pre-training with efficient audio transformer,” in Proc. IJ-
+       CAI, Main Track, 2024.
+[13]   K. Wilkinghoff, T. Fujimura, K. Imoto, J. Le Roux, Z.-H. Tan, and
+       T. Toda, “Handling domain shifts for anomalous sound detection: A
+       review of DCASE-related work,” in Proc. DCASE, 2025.
+[14]   K. Wilkinghoff, H. Yang, J. Ebbers, F. G. Germain, G. Wichern, and
+       J. Le Roux, “Local density-based anomaly score normalization for
+       domain generalization,” IEEE/ACM TASLP, vol. 33, pp. 4642–4652,
+       2025.
+[15]   M. Matsumoto, T. Fujimura, W. Huang, and T. Toda, “Adjusting bias
+       in anomaly scores via variance minimization for domain-generalized
+       discriminative anomalous sound detection,” in Proc. DCASE, 2025.
+[16]   A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N.
+       Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” in
+       Proc. NeurIPS, vol. 30, 2017.
+[17]   B. Zhang and R. Sennrich, “Root mean square layer normalization,”
+       in Proc. NeurIPS, vol. 32, 2019.
+[18]   N. Shazeer, “GLU variants improve transformer,” arXiv preprint
+       arXiv:2002.05202, 2020.
+[19]   DCASE Community, DCASE 2026 challenge task 2: Noise-aware
+       unsupervised anomalous sound detection for machine condition
+       monitoring, https://dcase.community/challenge2026/task-first-shot-
+       unsupervised- anomalous- sound- detection- for- machine- condition-
+       monitoring, Accessed: 2026-06-17, 2026.
+[20]   R. Scheibler, E. Bezzam, and I. Dokmanić, “Pyroomacoustics: A
+       python package for audio room simulation and array processing al-
+       gorithms,” in Proc. ICASSP, 2018.
+[21]   E. Fonseca, X. Favory, J. Pons, F. Font, and X. Serra, “FSD50K: An
+       open dataset of human-labeled sound events,” IEEE/ACM TASLP,
+       vol. 30, pp. 829–852, 2022.
+
