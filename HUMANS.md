@@ -21,3 +21,7 @@ Note that these encoders are trained to handle audio. Intel uses SlowFastR101 fo
 ### /papers
 
 Where the INTEL technical report and the MERL report are located. Core idea is that INTEL published the dataset and provided the baselines, but using methods from the MERL report should beat their baseline, especially on audio-only.
+
+### /docs 
+
+A link to the google docs proposal. To get an MD file that agents can use as context, simply run `scripts/sync_proposal.sh`.

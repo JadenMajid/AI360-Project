@@ -31,3 +31,5 @@ If asked to write a github issue, refer to <PROMPT THE USER> for an example issu
 - When creating an issue, add it to the project (`gh project item-add`) and link it under its epic; ask if the epic is unclear.
 - Set Status to In Progress when its branch/worktree is created; Done is set by GitHub on close/merge.
 - Views: create via `POST users/<owner>/projectsV2/<n>/views` (name, layout, filter); views can't be edited or deleted by API.
+
+Never update HUMANS.md.
