@@ -6,6 +6,7 @@ This is where datasets go, particularly the Intel multimodal dataset for now. Lo
 
 https://huggingface.co/datasets/IntelLabs/Intel_Robotic_Welding_Multimodal_Dataset
 
+I also have it hosted on my HF here: https://huggingface.co/datasets/shaundano/ai360-weld-data
 
 ### /models
 
@@ -16,6 +17,8 @@ BEATs is from Microsoft and downloaded via OneDrive. Find it here: https://githu
 EAT is from HuggingFace and can be found here: https://github.com/cwx-worst-one/EAT
 
 Note that these encoders are trained to handle audio. Intel uses SlowFastR101 for video encoding. It's from 2019 and trained on human motion, very different from close-up welding shots. So as a stretch goal we could perhaps fine-tune our own encoder (maybe a JEPA or DiNO-based one) and crush their baseline :p
+
+If you want to download everything in one place, request access here: https://huggingface.co/shaundano/ai360-weld-models
 
 
 ### /papers
