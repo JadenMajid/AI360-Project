@@ -6,3 +6,6 @@ timm==1.0.30
 torch==2.14.1
 torchaudio==2.11.0
 transformers==4.57.6  # EAT remote code breaks on 5.x
+
+wandb>=0.19,<1
+matplotlib

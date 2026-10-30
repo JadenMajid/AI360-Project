@@ -5,3 +5,4 @@ data/*
 __pycache__/
 docs/proposal.md
 artifacts/
+wandb/
