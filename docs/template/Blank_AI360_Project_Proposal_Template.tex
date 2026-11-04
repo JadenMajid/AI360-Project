@@ -1,0 +1,216 @@
+\documentclass[11pt]{article}
+
+% --------------------------------------------------
+% Packages
+% --------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{enumitem}
+
+% --------------------------------------------------
+% Formatting
+% --------------------------------------------------
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.5em}
+
+% --------------------------------------------------
+% Project Information
+% --------------------------------------------------
+\newcommand{\coursename}{AI 360: Deep Learning}
+\newcommand{\groupname}{Group Name [EDIT]}
+\newcommand{\projecttitle}{Project Title [EDIT]} 
+
+% --------------------------------------------------
+% Document
+% --------------------------------------------------
+\begin{document}
+
+\begin{center}
+    {\Large \textbf{\coursename}}\\[0.4em]
+    {\LARGE \textbf{Group Project Proposal}}\\[1em]
+    {\large \projecttitle}\\[1em]
+    \textbf{Group:} \groupname\\
+\end{center}
+
+Please describe your project in $\leq$4 pages excluding references.
+This template is for guidance, and you can decide the exact details to include, but we do require you to complete each of the tables and we strongly suggest keeping each section that we have provided in the template.
+
+\vspace{0.5em}
+\hrule
+\vspace{1em}
+
+% ==================================================
+\section{Group Composition}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l l}
+    \toprule
+    \textbf{Team Member} &
+    \textbf{Student ID} \\
+    \midrule
+    Member 1 & \\
+    Member 2 & \\
+    Member 3 & \\
+    \bottomrule
+\end{tabularx}
+\end{center}
+
+% ==================================================
+\section{Introduction and Problem Definition}
+
+Describe the problem that your project aims to address in 1 paragraph and
+explain why it is interesting or important. Your introduction should address the following questions:
+\begin{itemize}[noitemsep]
+    \item What problem are you trying to solve?
+    \item What is the motivation and potential significance of this problem?
+    \item What makes the problem suitable for a deep learning approach?
+    \item What is the specific research question or hypothesis you intend to investigate?
+\end{itemize}
+
+Clearly define the scope of the project. State what you aim to
+demonstrate or achieve by the end.
+
+% ==================================================
+\section{Related Work and Background}
+
+Briefly discuss relevant prior work, existing methods, and
+approaches related to your problem. Identify the most relevant paper(s).
+
+\begin{itemize}[noitemsep]
+    \item How your proposed project relates to existing work.
+    \item Which methods or ideas you intend to build upon.
+\end{itemize}
+
+% ==================================================
+\section{Datasets}
+
+Describe the datasets you plan to use for training, validation,
+and testing. Specify:
+\begin{itemize}[noitemsep]
+    \item Dataset name and source (include a URL or citation).
+    \item Task and type of data (e.g., images, video, text, or multimodal).
+    \item Approximate dataset size and relevant characteristics.
+    \item Intended training, validation, and test splits.
+    \item Any preprocessing or data augmentation required.
+    \item Access restrictions, licensing, or computational considerations.
+\end{itemize}
+
+Explain why the selected datasets are appropriate for the problem.
+
+% ==================================================
+\section{Available Hardware and Computational Resources}
+
+Describe the computational resources available to your group. Include relevant details such as GPUs or other accelerators available (model and memory, if known) beyond colab if any.
+
+% ==================================================
+\section{Proposed Model and Methodology}
+
+Describe your initial technical approach (this need not be a full definition of the model) and explain how you intend
+to develop and evaluate your deep learning solution.
+
+{\bf Model and Starting Point.} 
+Specify the model or architecture (e.g., CNN, RNN, GNN, etc.) you intend to use and justify your choice. Clarify the starting point of your project:
+\begin{itemize}[noitemsep]
+    \item Will you use an existing pre-trained model?
+    \item Will you fine-tune an existing model on your task?
+    \item Will you train a model from scratch?
+    \item Will you adapt or combine existing architectures?
+\end{itemize}
+
+
+{\bf Proposed Approach.}
+Outline the main steps of your proposed method (As much as possible at this stage), including:
+\begin{itemize} [noitemsep]
+    \item Input representation and preprocessing.
+    \item Model architecture and key components.
+    \item Training objective or loss function, if applicable.
+    \item Optimization strategy and important hyperparameters.
+    \item Inference procedure and expected outputs.
+\end{itemize}
+
+We want you to provide enough detail to establish that the approach is technically plausible, while recognizing that the implementation and design may evolve.
+
+{\bf Baselines and Evaluation.}
+
+Describe how you will determine whether your approach is successful. Specify:
+\begin{itemize}[noitemsep]
+    \item Baseline methods or reference models.
+    \item Evaluation metrics appropriate to the task.
+    \item Experimental comparisons or ablation studies.
+    \item Expected results and how they will be interpreted.
+\end{itemize}
+
+% ==================================================
+\section{Timeline and Deliverables}
+
+Provide a realistic timeline for the project, identifying milestones,
+deliverables, and dependencies.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{p{0.17\textwidth} X X}
+    \toprule
+    \textbf{Time Period} &
+    \textbf{Milestone / Activities} &
+    \textbf{Expected Deliverable} \\
+    \midrule
+    Week 1 & Lit. review and problem refinement & Finalized problem and plan \\
+    Week 2 & Dataset preprocessing & Working data pipeline \\
+    Week 3 & Baseline implementation & Initial baseline results \\
+    Week 4 & Model development and training & Initial model results \\
+    Week 5 & Final results and report & Final report and slides \\
+    \bottomrule
+\end{tabularx}
+\end{center}
+
+Adapt the timeline to the actual course schedule. Identify at least
+one intermediate milestone that can be used to assess feasibility
+and revise the approach if necessary.
+
+% ==================================================
+\section{Division of Work}
+
+Describe the planned responsibilities of each team member. Explain how team members will coordinate and integrate their work.
+Ensure that the distribution of work is clear and reasonably balanced.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l X X}
+    \toprule
+    \textbf{Team Member} &
+    \textbf{Primary Responsibilities} &
+    \textbf{Expected Contributions} \\
+    \midrule
+    Member 1, 2, 3 & Literature review and problem formulation & Related work and project design \\
+    Member 1 & Dataset preparation and preprocessing & Data pipeline and analysis \\
+    Member 2 & Model implementation and training & Model and training code \\
+    Member 3 & Evaluation and experimental analysis & Metrics, comparisons, and visualization \\
+    \bottomrule
+\end{tabularx}
+\end{center}
+
+
+% ==================================================
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+% Alternatively, references can be listed manually using
+% thebibliography if a separate .bib file is not used.
+
+\end{document}

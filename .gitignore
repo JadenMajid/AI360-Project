@@ -3,6 +3,12 @@ models/*
 data/*
 .venv
 __pycache__/
-docs/proposal.md
+docs/google-doc/AI360_Proposal.md
+docs/**/*.aux
+docs/**/*.log
+docs/**/*.out
+docs/**/*.fls
+docs/**/*.fdb_latexmk
+docs/**/*.synctex.gz
 artifacts/
 wandb/
