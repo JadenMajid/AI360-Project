@@ -1,0 +1,23 @@
+{
+  "sample_rate": 16000,
+  "fft_sizes": [342, 1366, 2730, 5462],
+  "bottlenecks": [16, 32, 48, 64],
+  "seeds": [42, 43, 44],
+  "hidden_channels": 1024,
+  "chunk_frames": 192,
+  "batch_sizes": [16, 8, 4, 2, 1],
+  "epochs": 50,
+  "learning_rate": 0.0001,
+  "adam_betas": [0.9, 0.999],
+  "adam_epsilon": 1e-8,
+  "weight_decay": 0.0,
+  "pct_start": 0.3,
+  "div_factor": 25.0,
+  "final_div_factor": 10000.0,
+  "log_floor": 1e-8,
+  "num_workers": 4,
+  "torch_threads": 4,
+  "wandb_project": "ai360-intel-baseline",
+  "wandb_entity": null,
+  "wandb_mode": "online"
+}
