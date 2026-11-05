@@ -33,3 +33,5 @@ If asked to write a github issue, refer to <PROMPT THE USER> for an example issu
 - Views: create via `POST users/<owner>/projectsV2/<n>/views` (name, layout, filter); views can't be edited or deleted by API.
 
 Never update HUMANS.md.
+
+Refer to /ADVICE.md for good deep learning advice.
