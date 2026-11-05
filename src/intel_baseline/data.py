@@ -36,10 +36,35 @@ def cached_archive():
     archive = repo / "snapshots" / revision / "intel_welding/intel_robotic_welding_dataset.tar.gz"
     if not archive.is_file():
         raise FileNotFoundError(f"Missing dataset archive: {archive}")
+    assert_archive_ready(archive)
     return archive, revision
 
 
+def assert_archive_ready(archive):
+    archive = Path(archive)
+    if not archive.is_file() or archive.stat().st_size == 0 or archive.resolve().name.endswith((".incomplete", ".partial", ".part")):
+        raise ValueError("Dataset archive is missing or incomplete; wait for the download to finish")
+    repository = next((p for p in archive.parents if p.name.startswith("datasets--")), None)
+    if repository is None:
+        return
+    if any((repository / "blobs").glob("*.incomplete")):
+        raise ValueError("Dataset cache contains incomplete downloads; finish the download before prepare")
+    lock_directory = repository.parent / ".locks" / repository.name
+    if lock_directory.is_dir():
+        import fcntl
+        for lock in lock_directory.glob("*.lock"):
+            with lock.open("r") as handle:
+                try:
+                    fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError as error:
+                    raise ValueError("A dataset download is active; wait for it to finish before prepare") from error
+                finally:
+                    fcntl.flock(handle, fcntl.LOCK_UN)
+
+
 def extract_audio(archive, root):
+    assert_archive_ready(archive)
+    initial = (Path(archive).stat().st_size, Path(archive).stat().st_mtime_ns)
     root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=True)
     count, seen = 0, set()
@@ -69,6 +94,8 @@ def extract_audio(archive, root):
                     print(f"Prepared {count} audio recordings", flush=True)
     if count != 4040 or not (root / "manifest.csv").is_file():
         raise ValueError(f"Expected 4,040 archive recordings and a manifest; found {count}")
+    if initial != (Path(archive).stat().st_size, Path(archive).stat().st_mtime_ns):
+        raise ValueError("Archive changed during extraction; finish the download, then rerun prepare")
 
 
 def validate_manifest(manifest, official=True):

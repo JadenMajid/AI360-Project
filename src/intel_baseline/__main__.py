@@ -35,7 +35,13 @@ def main():
     args.output_dir = artifact_root(args.output_dir)
     if args.command == "prepare":
         from .data import audit_data, cached_archive, extract_audio
-        archive, revision = (args.archive, "provided") if args.archive else cached_archive()
+        if args.audit_only and args.archive is None:
+            import json
+            previous = args.data_root / "audit.json"
+            metadata = json.loads(previous.read_text()) if previous.is_file() else {}
+            archive, revision = metadata.get("archive"), metadata.get("revision", "provided")
+        else:
+            archive, revision = (args.archive, "provided") if args.archive else cached_archive()
         if not args.audit_only:
             extract_audio(archive, args.data_root)
         audit = audit_data(args.data_root, revision, archive)
@@ -55,9 +61,19 @@ def main():
                 raise ValueError("Training FFT and bottleneck must be included in the configuration")
             fit(config, args.data_root, args.output_dir, args.fft_size, args.bottleneck, args.seed,
                 args.batch_size, args.device, args.resume)
-    else:
-        raise NotImplementedError(f"{args.command} implementation is not installed yet")
+    elif args.command == "evaluate":
+        from .evaluation import evaluate
+        evaluate(config, args.data_root, args.output_dir, args.device, args.split, args.checkpoint)
+    elif args.command == "report":
+        from .reporting import report
+        report(config, args.data_root, args.output_dir)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    import tarfile
+    try:
+        main()
+    except (ValueError, OSError, RuntimeError, EOFError, tarfile.TarError) as error:
+        print(f"intel-baseline: {error}", file=sys.stderr)
+        sys.exit(2)

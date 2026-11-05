@@ -6,7 +6,7 @@ import unittest
 
 import pandas as pd
 
-from src.intel_baseline.data import CATEGORIES, EXPECTED, audit_data, extract_audio, safe_relative, validate_manifest
+from src.intel_baseline.data import CATEGORIES, EXPECTED, assert_archive_ready, audit_data, extract_audio, safe_relative, validate_manifest
 
 
 class ManifestTests(unittest.TestCase):
@@ -56,6 +56,32 @@ class ManifestTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 extract_audio(archive, Path(directory) / "data")
             self.assertFalse((Path(directory) / "escape.flac").exists())
+
+    def test_incomplete_download_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "datasets--test"
+            blobs = root / "blobs"
+            blobs.mkdir(parents=True)
+            archive = root / "data.tar.gz"
+            archive.write_bytes(b"fixture")
+            partial = blobs / "blob.incomplete"
+            partial.write_bytes(b"unfinished")
+            with self.assertRaisesRegex(ValueError, "incomplete downloads"):
+                assert_archive_ready(archive)
+
+    def test_active_download_lock_rejected(self):
+        import fcntl
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "datasets--test"
+            root.mkdir()
+            archive = root / "data.tar.gz"
+            archive.write_bytes(b"fixture")
+            locks = Path(directory) / ".locks" / root.name
+            locks.mkdir(parents=True)
+            with (locks / "download.lock").open("w") as handle:
+                fcntl.flock(handle, fcntl.LOCK_EX)
+                with self.assertRaisesRegex(ValueError, "download is active"):
+                    assert_archive_ready(archive)
 
 
 if __name__ == "__main__":
