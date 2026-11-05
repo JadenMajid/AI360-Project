@@ -9,14 +9,42 @@ import torch
 
 from src.intel_baseline.common import DEFAULT_CONFIG, load_config
 from src.intel_baseline.features import AudioChunks, feature_path
-from src.intel_baseline.training import fit_datasets
+from src.intel_baseline.model import IntelAutoencoder
+from src.intel_baseline.training import build_optimizer, fit_datasets
 
 
 class TrainingTests(unittest.TestCase):
     def test_resume_matches_uninterrupted_training(self):
+        self.check_resume("adam")
+
+    def test_muon_resume_matches_uninterrupted_training(self):
+        self.check_resume("muon")
+
+    def test_muon_updates_all_parameters_and_clears_original_gradients(self):
+        torch.set_num_threads(1)
+        model = IntelAutoencoder(3, bottleneck=2, hidden=4)
+        config = {**load_config(DEFAULT_CONFIG), "optimizer": "muon"}
+        optimizer = build_optimizer(model, config)
+        originals = {name: p.detach().clone() for name, p in model.named_parameters()}
+        for p in model.parameters():
+            p.grad = torch.ones_like(p)
+        optimizer.step()
+        for name, p in model.named_parameters():
+            self.assertFalse(torch.equal(p, originals[name]), name)
+        self.assertEqual(len(optimizer.muon_parameters), 8)
+        optimizer.zero_grad()
+        self.assertTrue(all(p.grad is None for p in model.parameters()))
+        originals = {name: p.detach().clone() for name, p in model.named_parameters()}
+        optimizer.step()
+        for name, p in model.named_parameters():
+            torch.testing.assert_close(p, originals[name], rtol=0, atol=0)
+
+    def check_resume(self, optimizer):
         torch.set_num_threads(1)
         config = {**load_config(DEFAULT_CONFIG), "hidden_channels": 4, "epochs": 4,
                   "num_workers": 2, "wandb_mode": "disabled", "chunk_frames": 16}
+        if optimizer == "muon":
+            config.update(optimizer="muon", muon_ns_steps=2)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             frame = pd.DataFrame([dict(recording_id="train", split="TRAIN", category="Good", label=0, n_samples=64),

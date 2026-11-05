@@ -9,6 +9,7 @@ from .data import load_index
 from .features import AudioChunks, chunk_loader, prepare_features, spectrogram
 from .model import IntelAutoencoder, masked_mse
 from .scoring import score_recordings
+from .training import build_optimizer
 
 
 def choose_batch(config, device):
@@ -17,7 +18,7 @@ def choose_batch(config, device):
         model = optimizer = features = loss = output = target = None
         try:
             model = IntelAutoencoder(fft // 2 + 1, bottleneck, config["hidden_channels"]).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
+            optimizer = build_optimizer(model, config)
             features = torch.randn(batch_size, fft // 2 + 1, config["chunk_frames"], device=device)
             for _ in range(2):
                 optimizer.zero_grad(set_to_none=True)
@@ -56,7 +57,7 @@ def smoke(config, data_root, output_dir, device):
     features, lengths, _, _ = next(iter(loader))
     features, lengths = features.to(device), lengths.to(device)
     model = IntelAutoencoder(fft // 2 + 1, 48, config["hidden_channels"]).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
+    optimizer = build_optimizer(model, config)
     losses, started = [], time.monotonic()
     for _ in range(100):
         model.train()

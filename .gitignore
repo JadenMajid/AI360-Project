@@ -12,3 +12,4 @@ docs/**/*.fdb_latexmk
 docs/**/*.synctex.gz
 artifacts/
 wandb/
+**/cache/

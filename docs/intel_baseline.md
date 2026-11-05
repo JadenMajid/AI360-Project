@@ -54,6 +54,16 @@ W&B uses project `ai360-intel-baseline` and the authenticated account's default 
 
 `report` regenerates metrics and figures from saved CSV predictions and metadata without inference or model loading. Pending runs remain explicitly marked as pending. The primary result always uses seed 42; repeat seeds do not replace it.
 
+## One-run Muon comparison
+
+```bash
+bash scripts/run_intel_muon_once.sh
+```
+
+This runs seed 42 once for 50 epochs using `configs/intel_muon_once.json`, then evaluates the validation-selected, frozen checkpoint on TEST. Muon updates the eight hidden convolution kernels, flattened as `[channels, remaining dimensions]`; Adam updates the input/output projection kernels, biases, and output PReLU. Native PyTorch Muon uses Nesterov momentum 0.95, five Newton–Schulz steps, and `match_rms_adamw` scaling to retain the baseline's peak LR of 1e-4 and one-cycle schedule. Weight decay remains zero. This is one untuned trial.
+
+Results and checkpoints go to `artifacts/intel_muon_once/`, reusing the audited baseline feature cache. W&B is disabled for this local trial. Rerunning the command resumes the same run. Compare against Adam seed 42 in `artifacts/intel_baseline/`; the default Adam configuration and existing checkpoints remain compatible.
+
 ## Tests
 
 ```bash

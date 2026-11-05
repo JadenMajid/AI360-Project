@@ -66,8 +66,9 @@ class RunLogger:
         try:
             import wandb
             previous = json.loads(self.path.read_text()) if self.path.is_file() else {}
+            name = directory.name if config.get("optimizer", "adam") == "adam" else f"muon-{directory.name}"
             self.run = wandb.init(project=config["wandb_project"], entity=config["wandb_entity"],
-                                  name=directory.name, id=previous.get("id") if resume else None,
+                                  name=name, id=previous.get("id") if resume else None,
                                   resume="allow" if resume else None, mode=config["wandb_mode"],
                                   dir=str(directory), config=metadata,
                                   settings=wandb.Settings(init_timeout=20))
@@ -92,10 +93,20 @@ class RunLogger:
                 warnings.warn(f"W&B shutdown interrupted: {error}")
 
 
+def build_optimizer(model, config):
+    if config.get("optimizer", "adam") == "muon":
+        from .optimizers import MuonWithAdam
+        auxiliary = {id(model.encoder[0].weight), id(model.decoder[-2].weight)}
+        matrices = [p for p in model.parameters() if p.ndim >= 2 and id(p) not in auxiliary]
+        others = [p for p in model.parameters() if p.ndim < 2 or id(p) in auxiliary]
+        return MuonWithAdam(matrices, others, config)
+    return torch.optim.Adam(model.parameters(), lr=config["learning_rate"],
+                            betas=tuple(config["adam_betas"]), eps=config["adam_epsilon"],
+                            weight_decay=config["weight_decay"])
+
+
 def make_optimizer(model, config, steps):
-    optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"],
-                                  betas=tuple(config["adam_betas"]), eps=config["adam_epsilon"],
-                                  weight_decay=config["weight_decay"])
+    optimizer = build_optimizer(model, config)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=config["learning_rate"], epochs=config["epochs"], steps_per_epoch=steps,
         pct_start=config["pct_start"], anneal_strategy="cos", div_factor=config["div_factor"],

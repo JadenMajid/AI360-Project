@@ -1,0 +1,8 @@
+{
+  "optimizer": "muon",
+  "muon_momentum": 0.95,
+  "muon_ns_steps": 5,
+  "muon_adjust_lr_fn": "match_rms_adamw",
+  "wandb_mode": "disabled",
+  "seeds": [42]
+}

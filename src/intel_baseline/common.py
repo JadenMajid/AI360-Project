@@ -28,10 +28,19 @@ def load_config(path):
         config = json.load(f)
     with Path(path).open() as f:
         supplied = json.load(f)
-    unknown = set(supplied) - set(config)
+    optional = {"optimizer", "muon_momentum", "muon_ns_steps", "muon_adjust_lr_fn"}
+    unknown = set(supplied) - set(config) - optional
     if unknown:
         raise ValueError(f"Unknown configuration keys: {sorted(unknown)}")
     config.update(supplied)
+    if config.get("optimizer", "adam") not in ("adam", "muon"):
+        raise ValueError("optimizer must be adam or muon")
+    if not 0 <= config.get("muon_momentum", 0.95) < 1:
+        raise ValueError("muon_momentum must be in [0, 1)")
+    if type(config.get("muon_ns_steps", 5)) is not int or config.get("muon_ns_steps", 5) < 1:
+        raise ValueError("muon_ns_steps must be a positive integer")
+    if config.get("muon_adjust_lr_fn", "match_rms_adamw") not in ("original", "match_rms_adamw"):
+        raise ValueError("Invalid muon_adjust_lr_fn")
     for key in ("sample_rate", "hidden_channels", "chunk_frames", "epochs", "torch_threads"):
         if type(config[key]) is not int or config[key] <= 0:
             raise ValueError(f"{key} must be a positive integer")
