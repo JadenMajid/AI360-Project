@@ -41,6 +41,20 @@ def main():
         audit = audit_data(args.data_root, revision, archive)
         atomic_json(args.output_dir / "data_audit.json", audit)
         print(f"Audit passed: {audit['recordings']} recordings; fingerprint {audit['fingerprint']}")
+    elif args.command == "smoke":
+        from .smoke import smoke
+        smoke(config, args.data_root, args.output_dir, args.device)
+    elif args.command in ("train", "sweep"):
+        from .common import preflight
+        from .training import fit, sweep
+        if args.command == "sweep":
+            sweep(config, args.data_root, args.output_dir, args.device, args.resume)
+        else:
+            preflight(args.device, config["torch_threads"])
+            if args.fft_size not in config["fft_sizes"] or args.bottleneck not in config["bottlenecks"]:
+                raise ValueError("Training FFT and bottleneck must be included in the configuration")
+            fit(config, args.data_root, args.output_dir, args.fft_size, args.bottleneck, args.seed,
+                args.batch_size, args.device, args.resume)
     else:
         raise NotImplementedError(f"{args.command} implementation is not installed yet")
 
