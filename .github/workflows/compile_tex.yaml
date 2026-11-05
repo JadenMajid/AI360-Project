@@ -1,3 +1,4 @@
+
 name: Compile LaTeX
 
 on:
@@ -16,17 +17,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install XeLaTeX
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-xetex
+      - name: Compile all LaTeX files
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: '**/*.tex'
+          latexmk_use_xelatex: true
+          work_in_root_file_dir: true
+          continue_on_error: true
 
-      - name: Compile PDF
-        run: |
-          xelatex -interaction=nonstopmode -halt-on-error main.tex
-
-      - name: Upload PDF
+      - name: Upload compiled PDFs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: compiled-latex
-          path: main.pdf
+          name: compiled-pdfs
+          path: '**/*.pdf'
+          if-no-files-found: ignore
