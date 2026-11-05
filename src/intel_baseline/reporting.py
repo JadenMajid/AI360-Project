@@ -26,6 +26,8 @@ def report(config, data_root, output, report_path=None):
     plots = output / "plots"
     plots.mkdir(parents=True, exist_ok=True)
     lines = ["# Intel audio baseline replication", "", "16 kHz adaptation; published 192 kHz reference AUC: **0.8460**.", "", "## Status", ""]
+    lines += [f"Configured FFT sizes: {config['fft_sizes']}; bottlenecks: {config['bottlenecks']}; "
+              f"seeds: {config['seeds']}; {config['epochs']} epochs per run.", ""]
     audit_path = Path(data_root) / "audit.json"
     audit = json.loads(audit_path.read_text()) if audit_path.is_file() else None
     if audit:

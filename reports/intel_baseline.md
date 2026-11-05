@@ -4,6 +4,8 @@
 
 ## Status
 
+Configured FFT sizes: [1366]; bottlenecks: [48]; seeds: [42, 43, 44]; 50 epochs per run.
+
 Dataset audit has not completed. No experimental results are claimed.
 
 Model selection is pending. Test evaluation remains locked.

@@ -1,7 +1,7 @@
 {
   "sample_rate": 16000,
-  "fft_sizes": [342, 1366, 2730, 5462],
-  "bottlenecks": [16, 32, 48, 64],
+  "fft_sizes": [1366],
+  "bottlenecks": [48],
   "seeds": [42, 43, 44],
   "hidden_channels": 1024,
   "chunk_frames": 192,

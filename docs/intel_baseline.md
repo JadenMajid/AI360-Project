@@ -12,9 +12,9 @@ From the repository root, with the virtual environment installed and W&B authent
 bash scripts/run_intel_baseline.sh
 ```
 
-This runs preparation, the GPU smoke/overfit check, all 16 validation configurations, two repeat seeds of the winner, frozen-selection test evaluation, and report generation. Existing runs resume from their latest completed epoch. No dataset download is initiated by the runner.
+This runs preparation, the GPU smoke/overfit check, Intel's best reported configuration with seeds 42, 43, and 44, frozen-selection test evaluation, and report generation. Existing runs resume from their latest completed epoch. No dataset download is initiated by the runner.
 
-The full experiment uses 50 epochs per run, width 1,024, float32, four FFT durations, and four bottleneck sizes. It requires a CUDA host. The first complete epoch produces a runtime estimate; estimates vary with FFT size. Feature caches can consume tens of GB. Checkpoints include optimizer and RNG state, so reserve additional disk space for the 18 runs.
+The experiment uses bottleneck 48 and Intel's best FFT duration: 16,384 samples at 192 kHz, adapted to 1,366 samples at 16 kHz with hop 683. Each of the three seed runs uses 50 epochs, width 1,024, float32, and peak learning rate 1e-4. There is no hyperparameter search. It requires a CUDA host. The first complete epoch produces a runtime estimate. Reserve disk space for the feature cache and three runs' model and optimizer checkpoints.
 
 Override locations through `INTEL_BASELINE_CONFIG`, `INTEL_BASELINE_DATA_ROOT`, `INTEL_BASELINE_OUTPUT_DIR`, or `INTEL_BASELINE_PYTHON`. Keep output outside worktrees. The launcher records the effective configuration in each run's settings and W&B.
 
@@ -31,7 +31,7 @@ Override locations through `INTEL_BASELINE_CONFIG`, `INTEL_BASELINE_DATA_ROOT`, 
 
 All commands accept `--config`, `--data-root`, and `--output-dir`. Use the same values throughout an experiment. `prepare --archive PATH` selects another archive; `prepare --audit-only` audits an existing extraction without requiring a cached download. `--device cpu` is intended for development checks.
 
-`train --resume` requires identical settings and data. Its configuration must be included in the configured grid. A manually trained grid member can subsequently be reused by `sweep --resume` if its seed, batch size, and full configuration agree.
+`train --resume` requires identical settings and data. The default configuration accepts only FFT 1,366 and bottleneck 48. The `sweep --resume` command orchestrates the three seeds of this single configuration. A manually trained run can subsequently be reused if its seed, batch size, and full configuration agree.
 
 `evaluate` defaults to TEST and requires the completed sweep's `selection.json`. Without `--checkpoint`, it evaluates all selected seeds. A specified test checkpoint must match the frozen selection's hash. For exploratory validation scoring:
 
