@@ -39,6 +39,8 @@ def choose_batch(config, device):
 
 
 def smoke(config, data_root, output_dir, device):
+    from .training import seed_everything
+    seed_everything(config["seeds"][0])
     environment = preflight(device, config["torch_threads"])
     batch = choose_batch(config, device)
     torch.manual_seed(config["seeds"][0])

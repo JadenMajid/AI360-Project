@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 from .common import digest
 
@@ -90,6 +90,9 @@ class AudioChunks(Dataset):
 
 
 def chunk_loader(dataset, batch_size, config, shuffle=False, generator=None):
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, generator=generator,
+    sampler = RandomSampler(dataset, generator=generator) if shuffle else None
+    worker_generator = torch.Generator().manual_seed(0)
+    return DataLoader(dataset, batch_size=batch_size, sampler=sampler, generator=worker_generator,
                       num_workers=config["num_workers"], pin_memory=torch.cuda.is_available(),
+                      multiprocessing_context="spawn" if config["num_workers"] > 0 else None,
                       persistent_workers=config["num_workers"] > 0)
