@@ -1,0 +1,212 @@
+% Self-contained NeurIPS-style short report: no external style, bibliography,
+% figures, or generated inputs. Compile with: pdflatex neurips.tex (twice).
+\documentclass[10pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage{courier}
+\usepackage[textwidth=5.5in,textheight=9in,top=1in,headheight=12pt,headsep=18pt]{geometry}
+\usepackage{amsmath,amssymb,booktabs,microtype}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue,
+pdftitle={Replicating Intel's Acoustic Weld-Defect Detection Baseline at 16 kHz},
+pdfauthor={Jaden Majid, Hieu Le, Chris Tardy, Irene Berezin}]{hyperref}
+\urlstyle{same}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5.5pt}
+\setlength{\textfloatsep}{10pt}
+\setlength{\abovecaptionskip}{5pt}
+\setlength{\belowcaptionskip}{0pt}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}{-2.0ex plus -.5ex}{.8ex}{\large\bfseries}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}{-1.5ex plus -.4ex}{.5ex}{\normalsize\bfseries}}
+\makeatother
+
+\begin{document}
+\begin{center}
+\hrule height 4pt
+\vspace{9pt}
+{\LARGE\bfseries Replicating Intel's Acoustic Weld-Defect\par
+Detection Baseline at 16 kHz\par}
+\vspace{9pt}
+\hrule height 1pt
+\vspace{12pt}
+{\normalsize Jaden Majid \quad Hieu Le \quad Chris Tardy \quad Irene Berezin}\\[3pt]
+Grad Student Descent \quad $\cdot$ \quad AI 360\\[2pt]
+{\small Experiment snapshot: November 4, 2026}
+\end{center}
+\vspace{-2pt}
+\begin{center}\textbf{Abstract}\end{center}
+\begin{quotation}\small
+We reimplement Intel's one-dimensional convolutional autoencoder for acoustic
+weld-defect detection using the released mono 16\,kHz recordings. The experiment
+retains the published best bottleneck and approximately preserves its spectral
+analysis duration, while making unspecified implementation choices explicit.
+The designated primary run achieves test ROC-AUC 0.8178, compared with the
+published 192\,kHz result of 0.8460. Across three completed 50-epoch runs,
+mean test ROC-AUC is $0.8180\pm0.0007$ and mean validation ROC-AUC is
+$0.8158\pm0.0005$ (sample standard deviations). These results establish a baseline for the released audio,
+but do not isolate the effect of sampling rate or establish exact reproduction
+of the original benchmark.
+\end{quotation}
+
+\section{Scope and data}
+Stemmer et al.~\cite{stemmer2024} detect defective welds by reconstructing
+normal welding audio. We reproduce their audio-only model from scratch as a
+baseline for subsequent representation-learning experiments. This is a single
+configuration with three planned random seeds, rather than a repeat of the
+paper's FFT/bottleneck grid search. The configuration is chosen from the paper,
+before inspecting replication test scores.
+
+The audited release contains 4,040 mono FLAC recordings at 16\,kHz, spanning
+normal welds and eleven defect categories. We retain the manifest partitions
+(Table~\ref{tab:data}); only normal training recordings enter optimization.
+Recordings last 25--38\,s. Validation contains labeled defects and is used to
+select epochs, so training is normal-only but selection uses anomaly labels.
+The audit checks split counts, unique recording identifiers, waveform validity,
+and file hashes. No new split, trimming, or augmentation is applied.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+Partition & Normal & Defective & Total\\
+\midrule
+Training & 576 & 0 & 576\\
+Validation & 122 & 1,610 & 1,732\\
+Test & 121 & 1,611 & 1,732\\
+\bottomrule
+\end{tabular}
+\caption{Manifest partitions, matching the published protocol. Test labels are
+reserved for final evaluation.}\label{tab:data}
+\end{table}
+
+\section{Method and implementation choices}
+\textbf{Features.}
+The paper's selected FFT length is 16,384 at 192\,kHz, corresponding to
+85.33\,ms. Scaling by sampling rate and rounding to an even integer gives
+$N=1{,}366$ at 16\,kHz (85.375\,ms), with hop $H=683$ (42.6875\,ms).
+We compute a one-sided Hann-window STFT without centering or normalization,
+then $X_{ft}=\log\max(|\operatorname{STFT}(x)_{ft}|,10^{-8})$,
+giving $F=684$ frequency bins. Duration is preserved approximately; bandwidth
+is reduced to 8\,kHz and the frequency dimension changes.
+
+\textbf{Architecture.}
+Non-affine BatchNorm standardizes frequency channels. The encoder channel
+sequence is $684\!\to\!1024\!\to\!1024\!\to\!1024\!\to\!1024\!\to\!48$;
+five transposed convolutions reverse this sequence. All kernels have size
+three, stride one, and no padding. The encoder reduces time by ten frames and
+the decoder restores it. Activations are LeakyReLU with slope 0.01, except for
+a scalar output PReLU initialized to 0.25. The model has 23,380,701 trainable
+parameters. BatchNorm statistics update only during training; its standardized
+output, detached from the computation graph, is the reconstruction target.
+
+\textbf{Chunking, objective, and score.}
+Inputs are divided into 192-frame chunks, with a final end-aligned chunk when
+needed. Short chunks are reflect-padded. Padding is masked out of the loss and
+score, although it influences convolutions and training BatchNorm. Waveforms
+shorter than one FFT window are reflect-padded; incomplete trailing STFT
+windows are discarded. For chunk $c$, let $Z_c$ be the standardized target,
+$\widehat Z_c$ its reconstruction, and $m_{ct}$ indicate valid frames. We minimize
+\begin{equation}
+\mathcal L=
+\frac{\sum_{c,t,f}m_{ct}(\widehat Z_{cft}-Z_{cft})^2}
+{F\sum_{c,t}m_{ct}}.
+\end{equation}
+At inference, squared errors are averaged across frequency and, for frames
+covered by multiple chunks, across their reconstructions. The recording score
+is the mean over its original frames. Higher scores indicate anomalies.
+Thus, overlap does not give the final frames extra weight in recording scores.
+
+\section{Experimental protocol and observed results}
+We train in float32 for 50 epochs with batch size 16, Adam
+($\beta_1=0.9$, $\beta_2=0.999$, $\epsilon=10^{-8}$), and no weight decay.
+A cosine one-cycle schedule peaks at $10^{-4}$ after a 30\% warmup, with
+initial division factor 25 and final division factor 10,000; Adam momentum
+is fixed. Training uses 2,880 chunks, shuffled with the run seed, and validation
+uses 8,580 chunks. Runs use seeds 42, 43, and 44 on an NVIDIA GeForce RTX
+5070 Ti with PyTorch 2.14.1+cu130. Deterministic PyTorch algorithms are enabled.
+
+For each seed, the checkpoint with maximum pooled validation ROC-AUC is
+retained; ties retain the earlier epoch. Seed 42 is the designated primary
+result and is not replaced by the best seed. After all runs finish, checkpoint
+hashes are frozen in \texttt{selection.json} before test evaluation is enabled.
+The primary metric pools all defects versus normal recordings. Per-defect
+ROC-AUC compares each defect with the same normal validation recordings;
+their unweighted mean is a separate macro metric.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+Experiment & Epochs done & Best epoch & Val. AUC & Test AUC\\
+\midrule
+Published, 192\,kHz & 50 & --- & 0.8451 & 0.8460\\
+Replication, seed 42 & 50/50 & 47 & 0.8155 & 0.8178\\
+Replication, seed 43 & 50/50 & 40 & 0.8155 & 0.8174\\
+Replication, seed 44 & 50/50 & 49 & 0.8164 & 0.8188\\
+Mean $\pm$ sample SD & --- & --- & $0.8158\pm0.0005$ & $0.8180\pm0.0007$\\
+\bottomrule
+\end{tabular}
+\caption{Validation-selected results. Published values are from
+Tables 7 and 9 of~\cite{stemmer2024}. All three replication runs and evaluations
+are complete; test scores use the validation-selected, frozen checkpoints.
+The mean summarizes individual runs, without ensembling.}\label{tab:results}
+\end{table}
+
+The primary test ROC-AUC is 0.0282 below the published test value;
+its validation ROC-AUC is 0.0296 below the published validation value.
+Across three seeds, the test sample standard deviation is 0.0007; this measures
+variation from initialization and training order, rather than uncertainty from
+sampling new recordings.
+Seed 42's test macro defect AUC is 0.8497. Its highest per-defect test AUCs are
+overlap (0.9993), crater cracks (0.9882), and undercut (0.9839); warping
+(0.6162) and excessive penetration (0.6261) remain difficult.
+We recomputed metrics from saved predictions, checked validation results against
+run summaries and histories, and verified that test provenance and checkpoint
+hashes match the frozen selection.
+
+An independent real-data smoke check reduced MSE from 1.0001 to 0.2016 over
+100 updates on a fixed batch from two normal training recordings and verified
+checkpoint reload agreement. This checks optimization and serialization,
+without measuring anomaly-detection generalization. The completed runs each
+record approximately 7.3 minutes of run time; data preparation and the smoke
+check are excluded.
+
+\section{Limitations and reproducibility}
+This experiment adapts a published architecture to a different input release.
+Preserving STFT duration does not restore frequencies above 8\,kHz, and the
+smaller frequency axis also changes parameter count. BatchNorm behavior,
+padding, activation details, chunk length, and optimizer scheduling resolve
+omissions in the source paper. Consequently, the validation gap cannot be
+attributed to bandwidth alone. No ablation isolates these choices. Selection across
+50 validation epochs can also favor validation-specific behavior. No confidence
+interval, streaming latency measurement, or robustness
+to a new welding station is established here. The source dataset also has
+acknowledged label noise~\cite{stemmer2024}.
+
+The implementation is in \path{src/intel_baseline/}; the full settings are in
+\path{configs/intel_baseline.json}. After installing the environment and caching
+the dataset archive, the repository-root command below audits the data, runs
+or resumes training, freezes selection, evaluates the test partition, and
+generates the report:
+\begin{quote}\small\ttfamily bash scripts/run\_intel\_baseline.sh\end{quote}
+Artifacts under \texttt{artifacts/intel\_baseline/} retain settings, histories,
+best/latest checkpoints, predictions, and provenance. Random-generator,
+optimizer, and scheduler states are saved for epoch-boundary resumption.
+The dataset audit records revision \texttt{58e58e59beb7} and fingerprint prefix
+\texttt{d250a3293b81d849}; full identifiers are in \path{data/intel_baseline/audit.json}.
+Run metadata records code commit \texttt{0c2fba904be5} with a dirty working tree;
+that commit alone therefore does not fully specify the executed source.
+All three seed runs and frozen-checkpoint test evaluations are complete in this
+artifact snapshot.
+
+\begin{thebibliography}{1}
+\small
+\bibitem{stemmer2024}
+Georg Stemmer, Jose A. Lopez, Juan A. Del Hoyo Ontiveros, Arvind Raju,
+Tara Thimmanaik, and Sovan Biswas.
+\newblock Unsupervised Welding Defect Detection Using Audio and Video.
+\newblock \emph{arXiv preprint arXiv:2409.02290}, 2024.
+\newblock \url{https://arxiv.org/abs/2409.02290}.
+\end{thebibliography}
+\end{document}
