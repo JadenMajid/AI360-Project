@@ -152,7 +152,7 @@ def audit_data(root, revision="provided", archive=None):
     manifest_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
     metadata = dict(revision=revision, manifest_sha256=manifest_hash, recordings=len(frame),
                     fingerprint=digest({"manifest": manifest_hash, "records": records}),
-                    archive=str(archive) if archive else None, archive_bytes=Path(archive).stat().st_size if archive else None)
+                    archive=str(archive) if archive else None, archive_bytes=Path(archive).stat().st_size if archive and Path(archive).is_file() else None)
     temporary = root / "recordings.csv.partial"
     frame.to_csv(temporary, index=False)
     os.replace(temporary, root / "recordings.csv")
