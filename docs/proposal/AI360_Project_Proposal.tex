@@ -71,7 +71,7 @@
     \textbf{Student ID} \\
     \midrule
     Jaden Majid & 94916335 \\
-    Hieu Lexuan & 76067321 \\
+    Hieu Le & 76067321 \\
     Chris Tardy & 33171422 \\
     Irene Berezin & 43769694 \\
     \bottomrule
@@ -160,7 +160,7 @@ All three encoders are used pretrained, first frozen.
 \q{Will you fine-tune an existing model on your task?}%
 We then fine-tune them on good welds with an auxiliary task: classifying each weld's process settings (weld type, current, voltage).
 \q{Will you train a model from scratch?}%
-Only the Intel autoencoder, which we retrain on the released 16\,kHz audio (the paper used 192\,kHz) to obtain a new, directly comparable baseline.
+Only the Intel autoencoder is trained from scratch, on the released 16\,kHz audio (the paper used 192\,kHz), to obtain a new, directly comparable baseline.
 \q{Will you adapt or combine existing architectures?}%
 We pair the encoders with MERL's scoring method~\cite{merl} and average anomaly scores across encoders.
 
@@ -172,9 +172,9 @@ Inputs are mono 16\,kHz weld recordings, converted to the log-mel spectrogram ea
 The method has five steps:
 \begin{enumerate}[noitemsep]
     \item We reproduce the Intel baseline at 16\,kHz, scoring each weld recording by its reconstruction error and measuring test AUC.
-    \item Each frozen encoder maps a weld to embeddings; its anomaly score is the distance to its nearest neighbours among the 576 good training welds, so a weld unlike any good weld scores high. We measure AUC for an ensemble of 3 encoders $\times$ 3 seeds.
+    \item Each frozen encoder maps a weld to embeddings; its anomaly score is the distance to its nearest neighbours among the 576 good training welds, so a weld unlike any good weld scores high. We measure AUC for an ensemble of the 3 encoders.
     \item We fine-tune the encoders on the auxiliary settings-classification task, so their embeddings separate welding-relevant differences. The classifier head is then discarded.
-    \item We repeat $k$-NN detection with MERL's scoring. Rather than comparing whole welds, we compare each frequency band separately and average, so an unfamiliar mix of normal sounds is not flagged; we emphasise moments that differ most from the rest of the weld, so a brief defect is not averaged away; and we adjust scores for how tightly good welds cluster. Hyperparameters are swept on the validation set if necessary.
+    \item We repeat $k$-NN detection with MERL's scoring. Rather than comparing whole welds, we compare each frequency band separately and average, so an unfamiliar mix of normal sounds is not flagged; we emphasise moments that differ most from the rest of the weld, so a brief defect is not averaged away; and we adjust scores for how tightly good welds cluster. We measure AUC for an ensemble of 3 encoders $\times$ 3 fine-tuning seeds, sweeping hyperparameters on the validation set if necessary.
     \item As an extension, we apply test-time adaptation (TTA) to adapt the encoders to Sonibel data, a distribution shift from the Intel recordings. If Sonibel data is unavailable, we will instead construct corrupted test sets in the spirit of ImageNet-C and CIFAR-10-C~\cite{imagenetc}, using common audio corruptions (e.g.\ background noise, reverberation, gain changes, clipping). TTA methods will be chosen after a literature review; candidates include EATA~\cite{eata}, FOA~\cite{foa}, SAR~\cite{sar}, ActMAD~\cite{actmad}, NOTE~\cite{note} and BN adaptation~\cite{bnadapt}.
 \end{enumerate}
 \q{Training objective or loss function, if applicable.}%
@@ -218,9 +218,6 @@ Success is exceeding 0.846 audio-only AUC; a strong result would approach the 0.
 \end{tabularx}
 \end{center}
 
-We intend to work in parallel where each team member has a primary responsibility, but we contribute across tasks.
-We intend to merge the best parts of each team member's contributions at the end of each milestone.
-
 \q{Adapt the timeline to the actual course schedule. Identify at least one intermediate milestone that can be used to assess feasibility and revise the approach if necessary.}%
 \textbf{Checkpoint (Nov 25):} compare the reproduced Intel baseline, frozen and fine-tuned encoders on Intel's splits; revise scope if the baseline cannot be exceeded.
 
@@ -228,7 +225,7 @@ We intend to merge the best parts of each team member's contributions at the end
 \section{Division of Work}
 
 \q{Describe the planned responsibilities of each team member. Explain how team members will coordinate and integrate their work. Ensure that the distribution of work is clear and reasonably balanced.}%
-The project is undertaken by a team of four. Individual responsibilities and coordination arrangements will be confirmed by the team. Work to allocate includes the data pipeline and Intel baseline, encoder embedding extraction and fine-tuning, $k$-NN and MERL-style scoring, evaluation and stretch goals, and the final presentation and report.
+We intend to work in parallel where each team member has a primary responsibility, but we contribute across tasks. We intend to merge the best parts of each team member's contributions at the end of each milestone.
 
 \begin{center}
 \begin{tabularx}{\textwidth}{l X X}
@@ -237,7 +234,7 @@ The project is undertaken by a team of four. Individual responsibilities and coo
     \textbf{Primary Responsibilities} &
     \textbf{Expected Contributions} \\
     \midrule
-    Jaden Majid & Fine-tuning Encoders & Fine-tuned encoder checkpoints beating frozen on prediction loss \\
+    Jaden Majid & Fine-tuning Encoders & Fine-tuned encoder checkpoints beating frozen on validation AUC \\
     Hieu Le & Reproduce Baseline & Intel method implementation and new AUC baseline \\
     Chris Tardy & Literature Review + TTA & Novel TTA methods, implementation and results vs.\ baseline \\
     Irene Berezin & KNN implementation \& Evals & Frozen-encoder results, $k$-NN implementation, hyperparameter sweeps \\
