@@ -1,0 +1,32 @@
+name: Compile LaTeX
+
+on:
+  push:
+    paths:
+      - '**/*.tex'
+  pull_request:
+    paths:
+      - '**/*.tex'
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XeLaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-xetex
+
+      - name: Compile PDF
+        run: |
+          xelatex -interaction=nonstopmode -halt-on-error main.tex
+
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-latex
+          path: main.pdf
