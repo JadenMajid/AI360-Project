@@ -54,7 +54,10 @@ def evaluate(config, data_root, output, device, split="TEST", checkpoint=None):
         model.load_state_dict(saved["model"])
         predictions = score_recordings(model, dataset, chunk_loader(dataset, settings["batch_size"], config), device)
         directory = path.parent
-        predictions.to_csv(directory / f"{split.lower()}_scores.csv", index=False)
+        scores = directory / f"{split.lower()}_scores.csv"
+        temporary = scores.with_name(scores.name + ".partial")
+        predictions.to_csv(temporary, index=False)
+        temporary.replace(scores)
         atomic_json(directory / f"{split.lower()}_provenance.json", dict(
             checkpoint_sha256=checkpoint_hash(path), data_fingerprint=audit["fingerprint"], split=split))
         if split != "TRAIN":
