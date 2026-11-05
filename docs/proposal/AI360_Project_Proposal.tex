@@ -70,10 +70,10 @@
     \textbf{Team Member} &
     \textbf{Student ID} \\
     \midrule
-    Jaden Majid & \\
-    Hieu Lexuan & \\
+    Jaden Majid & 94916335 \\
+    Hieu Lexuan & 76067321 \\
     Chris Tardy & 33171422 \\
-    Irene Berezin & \\
+    Irene Berezin & 43769694 \\
     \bottomrule
 \end{tabularx}
 \end{center}
@@ -83,13 +83,13 @@
 
 \q{Describe the problem that your project aims to address in 1 paragraph and explain why it is interesting or important. Your introduction should address the following questions:}%
 \q{What problem are you trying to solve?}%
-We address the detection of weld defects from the acoustic signature of the welding arc, using only good welds for training, and on keeping it reliable when deployment conditions change.
+We address the detection of weld defects from the acoustic signature of the welding arc, using only good welds for training, and keeping it reliable when deployment conditions change.
 
 \q{What is the motivation and potential significance of this problem?}%
-Large fabrication projects (e.g.\ shipbuilding) involve thousands of welds, typically checked by post-weld inspection of a sampled subset. Detecting defects during welding would allow immediate rework and more targeted inspection. However, a deployed detector meets unseen stations, microphones and noise, and labelled data from each new site is rarely available. The project is sponsored by Sonibel Instruments, from whom we intend to receive proprietary data for test-time adaptation, under an NDA governing its handling and release.
+Large fabrication projects (e.g.\ shipbuilding) involve thousands of welds, typically checked by post-weld inspection of a sampled subset. Detecting defects during welding would allow immediate rework and more targeted inspection. However, a deployed detector meets unseen stations, microphones and noise, and labelled data from each new site is rarely available. The project is sponsored by Sonibel Instruments who are building commercial solutions to this problem, and from whom we intend to receive proprietary data for test-time adaptation, under an NDA governing its handling and release.
 
 \q{What makes the problem suitable for a deep learning approach?}%
-Welding audio is high-dimensional and defects are diverse and rare. Self-supervised audio encoders can model normal welds without defect labels, and test-time adaptation (TTA)~\cite{bnadapt,actmad,sar,note} can correct for distribution shift using only unlabelled test data.
+Welding audio is high-dimensional and defects are diverse and rare. Self-supervised audio encoders can model normal welds without defect labels, and test-time adaptation (TTA)~\cite{bnadapt,actmad,sar,note} can correct for distribution shift using only unlabelled test data. An academic-use welding dataset with a baseline method is available from Intel~\cite{intel}, and competitions such as DCASE~\cite{dcase} publish state-of-the-art methods, including the one proposed for this project~\cite{merl}.
 
 \q{What is the specific research question or hypothesis you intend to investigate?}%
 Our research question is whether the DCASE 2026 winning method (MERL~\cite{merl}) outperforms the Intel autoencoder baseline for acoustic weld-defect detection. Furthermore, can TTA recover its performance on shifted welding audio without labels?
@@ -101,7 +101,7 @@ The core deliverable is a MERL-style detector that exceeds the published audio-o
 \section{Related Work and Background}
 
 \q{Briefly discuss relevant prior work, existing methods, and approaches. Identify the most relevant paper(s).}%
-\textbf{Proof of Concept and Baseline.} The Intel welding benchmark~\cite{intel} is a dataset of both the audio and video streams of welding jobs, classified as correct or as one of 11 real anomalies. Its audio model is a 1D CNN autoencoder on FFT frames of 192\,kHz audio. Test AUC (how well anomaly scores rank defective welds above good ones) is 0.846 for audio, 0.898 for video, and 0.918 fused. Audio is weakest on burnthrough (0.70), warping (0.76), excessive penetration and spatter (both 0.78).
+\textbf{Proof of Concept and Baseline.} The Intel welding benchmark~\cite{intel} is a dataset of both the audio and video streams of welding jobs, classified as correct or as one of 11 real anomalies. Its audio model is a 1D CNN autoencoder on FFT frames of 192\,kHz audio. Test AUC (how well anomaly scores rank defective welds above good ones) is 0.846 for audio, 0.898 for video, and 0.918 fused. Audio is weakest on burnthrough (0.70), warping (0.76), excessive penetration and spatter (both 0.78). It should be noted that the published Intel dataset only supports audio up to 16 kHz, so we would re-implement Intel's method on their public data to determine fair baselines.
 
 \q{How your proposed project relates to existing work.}%
 \textbf{The Gap.} DCASE Task~2~\cite{dcase} is an annual challenge on detecting faulty machines from sound with only normal training data. Recent top systems use pretrained audio encoders (BEATs, EAT, CLAP), fine-tune them on auxiliary labels, and score by $k$-NN distance to normal embeddings. These consistently beat autoencoder baselines but have not been tested on welding. The 2026 winner, MERL~\cite{merl}, scored 66.2\% against 57.7\% for the autoencoder baseline.
@@ -120,7 +120,7 @@ We focus on audio. Defects span 11 categories, including porosity, burnthrough, 
 \q{Intended training, validation, and test splits.}%
 We reuse Intel's splits so results are directly comparable (Table~\ref{tab:splits}); training uses good welds only.
 \q{Any preprocessing or data augmentation required.}%
-Audio is resampled to each encoder's input rate and converted to its expected log-mel input; the baseline uses FFT frames of 192\,kHz audio, following~\cite{intel}.
+Audio is resampled to each encoder's input rate and converted to its expected log-mel input; the baseline uses FFT frames, following~\cite{intel}.
 \q{Access restrictions, licensing, or computational considerations.}%
 Access has been approved and we have the dataset; labels denote the intended defect, so some label noise is expected. Sonibel's proprietary data for TTA will be handled under an NDA.
 \q{Explain why the selected datasets are appropriate for the problem.}%
@@ -154,28 +154,35 @@ Lab GPUs, including an RTX 2080 Ti and an A5000, are available for embedding ext
 
 {\bf Model and Starting Point.}
 \q{Specify the model or architecture (e.g., CNN, RNN, GNN, etc.) you intend to use and justify your choice. Clarify the starting point of your project:}%
-We use transformer audio encoders (BEATs, EAT), self-supervised on AudioSet, chosen because public checkpoints are available and the leading DCASE systems use them.
+We use three transformer audio encoders (BEATs, EAT and EAT-large), self-supervised on AudioSet, chosen because public checkpoints are available and the leading DCASE systems use them. As a baseline, we re-implement Intel's 1D CNN autoencoder~\cite{intel}; its code is not public, but the paper lists the full architecture and training settings.
 \q{Will you use an existing pre-trained model?}%
-Both encoders are used pretrained, initially frozen.
+All three encoders are used pretrained, first frozen.
 \q{Will you fine-tune an existing model on your task?}%
-We then lightly fine-tune them on good welds with an auxiliary task (classifying weld type and material from metadata).
+We then fine-tune them on good welds with an auxiliary task: classifying each weld's process settings (weld type, current, voltage).
 \q{Will you train a model from scratch?}%
-Only the reproduced Intel 1D CNN autoencoder baseline is trained from scratch.
+Only the Intel autoencoder, which we retrain on the released 16\,kHz audio (the paper used 192\,kHz) to obtain a new, directly comparable baseline.
 \q{Will you adapt or combine existing architectures?}%
-We combine the pretrained encoders with MERL's scoring backend and ensemble BEATs and EAT.
+We pair the encoders with MERL's scoring method~\cite{merl} and average anomaly scores across encoders.
 
 {\bf Proposed Approach.}
 \q{Outline the main steps of your proposed method (As much as possible at this stage), including:}%
 \q{Input representation and preprocessing.}%
-Welding audio is resampled to each encoder's input rate and converted to its expected log-mel input; the baseline uses FFT frames of 192\,kHz audio.
+Inputs are mono 16\,kHz weld recordings, converted to the log-mel spectrogram each encoder expects, and to FFT frames for the Intel baseline.
 \q{Model architecture and key components.}%
-We proceed in four steps: (1) reproduce the Intel autoencoder; (2) frozen encoder with frame-level $k$-NN scoring, plus a log-mel $k$-NN control; (3) auxiliary-task fine-tuning; (4) MERL-style scoring: a frequency-wise memory bank, relative deviation pooling (so brief anomalies are not averaged away) and score rescaling.
+The method has five steps:
+\begin{enumerate}[noitemsep]
+    \item We reproduce the Intel baseline at 16\,kHz, scoring each weld recording by its reconstruction error and measuring test AUC.
+    \item Each frozen encoder maps a weld to embeddings; its anomaly score is the distance to its nearest neighbours among the 576 good training welds, so a weld unlike any good weld scores high. We measure AUC for an ensemble of 3 encoders $\times$ 3 seeds.
+    \item We fine-tune the encoders on the auxiliary settings-classification task, so their embeddings separate welding-relevant differences. The classifier head is then discarded.
+    \item We repeat $k$-NN detection with MERL's scoring. Rather than comparing whole welds, we compare each frequency band separately and average, so an unfamiliar mix of normal sounds is not flagged; we emphasise moments that differ most from the rest of the weld, so a brief defect is not averaged away; and we adjust scores for how tightly good welds cluster. Hyperparameters are swept on the validation set if necessary.
+    \item As an extension, we apply test-time adaptation (TTA) to adapt the encoders to Sonibel data, a distribution shift from the Intel recordings. If Sonibel data is unavailable, we will instead construct corrupted test sets in the spirit of ImageNet-C and CIFAR-10-C~\cite{imagenetc}, using common audio corruptions (e.g.\ background noise, reverberation, gain changes, clipping). TTA methods will be chosen after a literature review; candidates include EATA~\cite{eata}, FOA~\cite{foa}, SAR~\cite{sar}, ActMAD~\cite{actmad}, NOTE~\cite{note} and BN adaptation~\cite{bnadapt}.
+\end{enumerate}
 \q{Training objective or loss function, if applicable.}%
-Training objectives are reconstruction error for the baseline and cross-entropy on auxiliary weld-type and material labels for fine-tuning; the $k$-NN scorer requires no training.
+The Intel autoencoder baseline minimises reconstruction error; fine-tuning uses a cosine-similarity classification loss on the auxiliary labels, as in MERL. The $k$-NN scorer requires no training.
 \q{Optimization strategy and important hyperparameters.}%
-Fine-tuning uses a standard optimiser (e.g.\ AdamW) with a small learning rate; key hyperparameters are $k$, the number of frequency bands and the pooling weights, tuned on validation.
+Fine-tuning uses low-rank adapters (LoRA) with AdamW; key hyperparameters are $k$, the pooling weight and the number of class centres.
 \q{Inference procedure and expected outputs.}%
-At inference, per-frame $k$-NN distances are pooled to a clip-level anomaly score; online, an alarm is raised when the running score exceeds a validation-calibrated threshold.
+Each weld receives an anomaly score, averaged across the ensemble; online, an alarm is raised when the running score exceeds a threshold set on good validation welds.
 
 \q{We want you to provide enough detail to establish that the approach is technically plausible, while recognizing that the implementation and design may evolve.}%
 
@@ -202,17 +209,20 @@ Success is exceeding 0.846 audio-only AUC; a strong result would approach the 0.
     \textbf{Milestone / Activities} &
     \textbf{Expected Deliverable} \\
     \midrule
-    Nov 6--11 & Data loading; reproduce Intel baseline & Data pipeline and reproduced baseline \\
-    Nov 12--18 & Frozen embeddings + $k$-NN; log-mel control & Initial audio-only AUC comparison \\
-    Nov 19--25 & Light fine-tuning; MERL-style scoring & Core result: overall and per-defect AUC \\
-    Nov 26--Dec 2 & TTA: construct shifted test sets; evaluate BN adaptation, ActMAD, SAR & AUC under shift, before and after TTA \\
-    Dec 3--7 & Final analysis, presentation and report; online detection if time permits & Final report and slides \\
+    Nov 6--11 & Reproduce Intel baseline & Reproduced baseline AUC \\
+    Nov 12--18 & Frozen encoders + $k$-NN (MERL scoring) & Frozen-encoder AUC \\
+    Nov 19--25 & Fine-tune encoders; hyperparameter sweeps & Fine-tuned AUC beats baseline \\
+    Nov 26--Dec 2 & TTA on shifted data & AUC before and after TTA \\
+    Dec 3--7 & Final analysis and report & Final report and slides \\
     \bottomrule
 \end{tabularx}
 \end{center}
 
+We intend to work in parallel where each team member has a primary responsibility, but we contribute across tasks.
+We intend to merge the best parts of each team member's contributions at the end of each milestone.
+
 \q{Adapt the timeline to the actual course schedule. Identify at least one intermediate milestone that can be used to assess feasibility and revise the approach if necessary.}%
-\textbf{Checkpoint (Nov 25):} compare the reproduced autoencoder, log-mel features, frozen embeddings and the fine-tuning and scoring improvements on Intel's splits; revise scope if the baseline cannot be exceeded.
+\textbf{Checkpoint (Nov 25):} compare the reproduced Intel baseline, frozen and fine-tuned encoders on Intel's splits; revise scope if the baseline cannot be exceeded.
 
 % ==================================================
 \section{Division of Work}
@@ -227,10 +237,10 @@ The project is undertaken by a team of four. Individual responsibilities and coo
     \textbf{Primary Responsibilities} &
     \textbf{Expected Contributions} \\
     \midrule
-    Jaden Majid & TBC & TBC \\
-    Hieu Lexuan & TBC & TBC \\
-    Chris Tardy & TBC & TBC \\
-    Irene Berezin & TBC & TBC \\
+    Jaden Majid & Fine-tuning Encoders & Fine-tuned encoder checkpoints beating frozen on prediction loss \\
+    Hieu Le & Reproduce Baseline & Intel method implementation and new AUC baseline \\
+    Chris Tardy & Lit Review + TTA & Novel TTA methods, implementation and results vs.\ baseline \\
+    Irene Berezin & KNN + AUC (Evals) & Frozen-encoder results, $k$-NN implementation, hyperparameter sweeps, AUC \\
     \bottomrule
 \end{tabularx}
 \end{center}
@@ -244,6 +254,9 @@ The project is undertaken by a team of four. Individual responsibilities and coo
 \bibitem{bnadapt} Schneider et al. Improving robustness against common corruptions by covariate shift adaptation. NeurIPS, 2020. arXiv:2006.16971.
 \bibitem{actmad} Mirza et al. ActMAD: Activation matching to align distributions for test-time training. CVPR, 2023. arXiv:2211.12870.
 \bibitem{sar} Niu et al. Towards stable test-time adaptation in dynamic wild world. ICLR, 2023. arXiv:2302.12400.
+\bibitem{eata} Niu et al. Efficient test-time model adaptation without forgetting. ICML, 2022. arXiv:2204.02610.
+\bibitem{foa} Niu et al. Test-time model adaptation with only forward passes. ICML, 2024. arXiv:2404.01650.
+\bibitem{imagenetc} Hendrycks and Dietterich. Benchmarking neural network robustness to common corruptions and perturbations. ICLR, 2019. arXiv:1903.12261.
 \bibitem{note} Gong et al. NOTE: Robust continual test-time adaptation against temporal correlation. NeurIPS, 2022. arXiv:2208.05117.
 \end{thebibliography}
 
