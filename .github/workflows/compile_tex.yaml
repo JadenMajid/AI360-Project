@@ -5,9 +5,10 @@ on:
   push:
     paths:
       - '**/*.tex'
-  pull_request:
-    paths:
-      - '**/*.tex'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   compile:
@@ -16,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Compile all LaTeX files
         uses: xu-cheng/latex-action@v4
@@ -25,10 +28,17 @@ jobs:
           work_in_root_file_dir: true
           continue_on_error: true
 
-      - name: Upload compiled PDFs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: compiled-pdfs
-          path: '**/*.pdf'
-          if-no-files-found: ignore
+      - name: Commit compiled PDFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage generated PDFs, including updates to existing files
+          find . -type f -name '*.pdf' -not -path './.git/*' \
+            -exec git add -f -- {} +
+
+          # Commit only if there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "build: update compiled LaTeX PDFs"
+            git push
+          fi
